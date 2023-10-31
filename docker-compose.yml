@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+    mysql:
+      container_name: mysql
+      image: mysql:8.0-debian
+      environment:
+          MYSQL_USER: admin
+          MYSQL_ROOT_PASSWORD: password
+      ports:
+        - 3307:3306
+      volumes:
+        - ./data/mysql:/var/lib/mysql
+    
+    phpmyadmin:
+      container_name: phpmyadmin
+      image: phpmyadmin
+      ports:
+        - 8080:80
+      depends_on:
+        - mysql
+      links:
+        - mysql
+      environment:
+         PMA_ARBITRARY: 1
+         PMA_HOST: mysql
+         PMA_PORT: 3306
+      restart: always
+
+    redis:
+      container_name: redis
+      image: redis:7.0-alpine
+      ports:
+        - 6378:6379
+      volumes:
+        - ./data/redis:/data
+        - ./config/redis.conf:/redis.conf
+      command: redis-server /redis.conf
+
+    k6:  
+      container_name: k6
+      image: loadimpact/k6  
+      environment:
+        - K6_OUT=influxdb=http://influxdb:8086/k6
+      volumes:
+        - ./scripts:/scripts
+    influxdb:
+      container_name: influxdb
+      image: influxdb:1.8.10
+      environment:
+        - INFLUXDB_DB=k6
+        - INFLUXDB_HTTP_MAX_BODY_SIZE=0
+      ports:
+      - 8086:8086
+      volumes:
+      - ./data/influxdb:/var/lib/influxdb
+    # //dash board  
+    grafana:
+      container_name: grafana
+      image: grafana/grafana
+      environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      ports:
+      - 3000:3000
+      volumes:
+      - ./data/grafana:/var/lib/grafana
+    
